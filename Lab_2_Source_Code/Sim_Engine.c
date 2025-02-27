@@ -304,7 +304,7 @@ void stoptimer(int AorB /* A or B is trying to stop timer */)
     printf("Warning: Unable to cancel your timer. It wasn't running.\n");
 }
 
-void Svdstarttimer(int AorB /* A or B is trying to stop timer */, float increment)
+void starttimer(int AorB /* A or B is trying to stop timer */, float increment)
 {
     struct event *q;
     struct event *evptr;

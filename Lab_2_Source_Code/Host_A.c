@@ -59,7 +59,6 @@ void A_input(struct pkt packet) {
 	dequeue(&qt);
 	qt.wait = false;
 	stoptimer(A);
-	qt.next_seq = !qt.next_seq;
 	send_packet(false);
 }
 

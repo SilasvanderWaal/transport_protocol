@@ -2,7 +2,6 @@
 #include <string.h>
 
 #define A 0 // Could we use the constatns in defined in sim_engine.c instead? Maybe move them to the header file.
-#define B 1
 #define PAYLOAD_SIZE 20
 #define RTT 15.0
 #define TIMEOUT 30.0
@@ -22,13 +21,15 @@ int calc_checksum(struct pkt packet)
   return sum;
 }
 
+/*We are going to need some type of queue system for the packages created from the data that is recieved from layer 5*/
+
 /* Called from layer 5, passed the data to be sent to other side */
 void A_output(struct msg message)
 {
   memcpy(active_pkt.payload, message.data, sizeof(message.data));
-  active_pkt.checksum = calc_checksum(active_pkt);
-  starttimer(A, TIMEOUT); // Not sure about the increment argument, think it sets the TIMEOUT interval
-  tolayer3(A, active_pkt);
+  // active_pkt.checksum = calc_checksum(active_pkt);
+  //  starttimer(A, TIMEOUT);  // Not sure about the increment argument, think it sets the TIMEOUT interval
+  tolayer3(A, active_pkt); // We want to send this to a queue instead, this way we can handle several packages and keep them in the correct order
 }
 
 /* Called from layer 3, when a packet arrives for layer 4 */

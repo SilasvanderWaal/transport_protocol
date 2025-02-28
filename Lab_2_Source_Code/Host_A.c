@@ -1,4 +1,5 @@
 #include "Sim_Engine.h"
+#include "queue.h"
 #include <stdbool.h>
 #include <string.h>
 
@@ -7,11 +8,26 @@
 	  // move them to the header file.
 #define B			 1
 #define PAYLOAD_SIZE 20
-#define RTT			 15.0
 #define TIMEOUT		 30.0
 
 /* Global variables*/
-struct pkt active_pkt;
+struct queue qt;
+
+/*
+==============================================================
+				Private functions
+==============================================================
+*/
+
+/* Send oldest package */
+void send_packet(bool is_resend) {
+	if (is_empty(&qt) || (qt.wait && !is_resend))
+		return;
+	struct pkt sndpkt = peek(&qt);
+	starttimer(A, TIMEOUT);
+	qt.wait = true;
+	tolayer3(A, sndpkt);
+}
 
 int calc_checksum(struct pkt packet) {
 	int sum = 0;
@@ -27,34 +43,40 @@ bool validate_packet(struct pkt packet) {
 	return packet.checksum == calc_checksum(packet);
 }
 
-/*We are going to need some type of queue system for the packages created from
- * the data that is recieved from layer 5*/
+/*
+==============================================================
+				Public functions
+==============================================================
+*/
 
 /* Called from layer 5, passed the data to be sent to other side */
 void A_output(struct msg message) {
-	memcpy(active_pkt.payload, message.data, sizeof(message.data));
-	active_pkt.checksum = calc_checksum(active_pkt);
-	starttimer(A, TIMEOUT); // Not sure about the increment argument, think it
-							// sets the TIMEOUT interval
-	tolayer3(A, active_pkt);
+	struct pkt new_pkt;
+	strcpy(new_pkt.payload, message.data);
+	new_pkt.checksum = calc_checksum(new_pkt);
+	enqueue(&qt, new_pkt);
+	send_packet(false);
 }
 
 /* Called from layer 3, when a packet arrives for layer 4 */
 void A_input(struct pkt packet) {
-	if (packet.acknum != active_pkt.seqnum ||
-		packet.checksum != calc_checksum(packet)) {
+	if (packet.acknum != peek(&qt).seqnum || !validate_packet(packet)) {
 		return;
 	}
 	stoptimer(A);
-	active_pkt.seqnum = ++active_pkt.seqnum % 1;
+	dequeue(&qt);
+	qt.wait = false;
+	send_packet(false);
 }
 
 /* Called when A's timer goes off */
-void A_timerinterrupt() {
-	starttimer(A, TIMEOUT);
-	tolayer3(A, active_pkt);
-}
+void A_timerinterrupt() { send_packet(true); }
 
 /* The following routine will be called once (only) before any other */
 /* Host A routines are called. You can use it to do any initialization */
-void A_init() { active_pkt.seqnum = 0; }
+void A_init() {
+	qt.next_seq = 0;
+	qt.wait		= false;
+	qt.front	= 0;
+	qt.back		= 0;
+}

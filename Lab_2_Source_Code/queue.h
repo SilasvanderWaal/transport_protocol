@@ -11,14 +11,15 @@ struct queue {
 	unsigned int front;
 	unsigned int back;
 	struct pkt	 queue[QUEUE_SIZE];
-	bool		 active_seq;
+	bool		 next_seq;
+	bool		 wait;
 };
 
 int enqueue(struct queue *q, struct pkt p);
 
 int dequeue(struct queue *q);
 
-void peek(struct queue *q, struct pkt *p);
+struct pkt peek(struct queue *q);
 
 bool is_full(struct queue *q);
 

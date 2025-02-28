@@ -50,16 +50,17 @@ void A_output(struct msg message) {
 
 /* Called from layer 3, when a packet arrives for layer 4 */
 void A_input(struct pkt packet) {
-	if (!validate_packet(packet)) {
+	if (!validate_packet(packet) || packet.acknum == !peek(&qt).seqnum) {
+		stoptimer(A);
+		send_packet(true);
 		return;
 	}
 
-	if (packet.acknum == peek(&qt).seqnum) {
-		dequeue(&qt);
-		qt.wait = false;
-		stoptimer(A);
-		send_packet(false);
-	}
+	dequeue(&qt);
+	qt.wait = false;
+	stoptimer(A);
+	qt.next_seq = !qt.next_seq;
+	send_packet(false);
 }
 
 /* Called when A's timer goes off */

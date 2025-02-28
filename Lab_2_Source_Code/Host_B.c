@@ -12,25 +12,22 @@ void B_output(struct msg message) { /* DON'T IMPLEMENT */ }
 
 /* Called from layer 3, when a packet arrives for layer 4 */
 void B_input(struct pkt packet) {
-
-	if ((packet.checksum != calc_checksum(packet))) {
+	// Handling false incoming packets
+	if ((packet.seqnum != bit || !validate_packet(packet))) {
+		packet.acknum	= !bit;
+		packet.checksum = calc_checksum(packet);
+		tolayer3(B, packet);
 		return;
 	}
-
-	if (packet.seqnum == bit) {
-		bit = !bit;
-		tolayer5(B, packet.payload);
-		return;
-	}
-
-	//  Validate packet
-	int tmp		  = packet.seqnum;
-	packet.seqnum = packet.acknum;
-	packet.acknum = tmp;
-
+	// Delivering packet to application layer
+	tolayer5(B, packet.payload);
+	// Creating ACK packet
+	packet.acknum	= bit;
 	packet.checksum = calc_checksum(packet);
-
+	// Sending packet to host A
 	tolayer3(B, packet);
+	// Switching state
+	bit = !bit;
 }
 
 /* Called when B's timer goes off */

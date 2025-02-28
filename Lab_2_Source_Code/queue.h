@@ -5,7 +5,7 @@
 
 #include "Sim_Engine.h"
 
-#define QUEUE_SIZE 20
+#define QUEUE_SIZE 128
 
 struct queue {
 	unsigned int front;

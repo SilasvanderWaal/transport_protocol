@@ -1,14 +1,15 @@
 #include "Sim_Engine.h"
-#include "queue.h"
+
 #include <stdbool.h>
 #include <string.h>
+
+#include "helper.h"
+#include "queue.h"
 
 #define A                                                                      \
 	0 // Could we use the constatns in defined in sim_engine.c instead? Maybe
 	  // move them to the header file.
-#define B			 1
-#define PAYLOAD_SIZE 20
-#define TIMEOUT		 30.0
+#define B 1
 
 /* Global variables*/
 struct queue qt;
@@ -26,21 +27,8 @@ void send_packet(bool is_resend) {
 	struct pkt sndpkt = peek(&qt);
 	starttimer(A, TIMEOUT);
 	qt.wait = true;
+	// printf("seq: %d | ack: %d\n", sndpkt.seqnum, sndpkt.acknum);
 	tolayer3(A, sndpkt);
-}
-
-int calc_checksum(struct pkt packet) {
-	int sum = 0;
-	sum += packet.acknum;
-	sum += packet.seqnum;
-	for (size_t i = 0; i < PAYLOAD_SIZE; i++) {
-		sum += packet.payload[i];
-	}
-	return sum;
-}
-
-bool validate_packet(struct pkt packet) {
-	return packet.checksum == calc_checksum(packet);
 }
 
 /*
@@ -53,6 +41,8 @@ bool validate_packet(struct pkt packet) {
 void A_output(struct msg message) {
 	struct pkt new_pkt;
 	strcpy(new_pkt.payload, message.data);
+	new_pkt.seqnum	 = qt.next_seq;
+	new_pkt.acknum	 = 0;
 	new_pkt.checksum = calc_checksum(new_pkt);
 	enqueue(&qt, new_pkt);
 	send_packet(false);
@@ -60,13 +50,16 @@ void A_output(struct msg message) {
 
 /* Called from layer 3, when a packet arrives for layer 4 */
 void A_input(struct pkt packet) {
-	if (packet.acknum != peek(&qt).seqnum || !validate_packet(packet)) {
+	if (!validate_packet(packet)) {
 		return;
 	}
-	stoptimer(A);
-	dequeue(&qt);
-	qt.wait = false;
-	send_packet(false);
+
+	if (packet.acknum == peek(&qt).seqnum) {
+		dequeue(&qt);
+		qt.wait = false;
+		stoptimer(A);
+		send_packet(false);
+	}
 }
 
 /* Called when A's timer goes off */

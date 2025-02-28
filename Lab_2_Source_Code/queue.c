@@ -11,7 +11,6 @@ int enqueue(struct queue *q, struct pkt p) {
 
 	q->queue[q_back(q)] = p;
 	q->back++;
-	p.seqnum	= q->next_seq;
 	q->next_seq = !q->next_seq;
 
 	return 1;
